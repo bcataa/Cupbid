@@ -269,7 +269,29 @@ a {
   margin: 14px auto 0;
   max-width: 34rem;
   color: var(--muted);
-  line-height: 1.5;
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.amount-add-now {
+  margin: 16px auto 0;
+  padding: 10px 16px;
+  max-width: 28rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.amount-add-now strong {
+  color: var(--accent);
+  font-size: 1.15rem;
+}
+
+.amount-add-meta {
+  color: var(--muted);
+  font-size: 0.88rem;
 }
 
 .bid-bar {

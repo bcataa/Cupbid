@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { MIN_SPONSOR_BID } from '../lib/constants'
+import { DEFAULT_BID, MIN_SPONSOR_BID } from '../lib/constants'
 import {
   displayHost,
   formatMoney,
@@ -49,8 +49,11 @@ export function Hero({
 
   const isRaise = Boolean(existing)
   const minAllowed = isRaise ? existing!.amount + 1 : MIN_SPONSOR_BID
-  const defaultAmount = minAllowed
-  const amount = Math.max(minAllowed, manualAmount ?? defaultAmount)
+  const defaultAmount = isRaise ? existing!.amount + 1 : DEFAULT_BID
+  const amount = Math.max(
+    minAllowed,
+    Math.max(MIN_SPONSOR_BID, manualAmount ?? defaultAmount),
+  )
   const amountDisplay = amountText ?? String(amount)
   const payNow = isRaise ? amount - existing!.amount : amount
   const existingRank = existing
@@ -86,7 +89,7 @@ export function Hero({
   }
 
   const handleAmountBlur = () => {
-    const next = Math.max(minAllowed, amount || minAllowed)
+    const next = Math.max(minAllowed, Math.max(MIN_SPONSOR_BID, amount || defaultAmount))
     setManualAmount(next)
     setAmountText(null)
   }
@@ -112,7 +115,7 @@ export function Hero({
     setError('')
 
     const site = normalizeWebsite(website)
-    const finalAmount = Math.max(minAllowed, amount || minAllowed)
+    const finalAmount = Math.max(minAllowed, Math.max(MIN_SPONSOR_BID, amount || defaultAmount))
 
     try {
       const result = await onSubmit({
@@ -150,12 +153,22 @@ export function Hero({
         people will click through.
       </p>
 
+      {isRaise && validSite ? (
+        <p className="amount-add-now" aria-live="polite">
+          Adding <strong>{formatMoney(payNow)}</strong> now
+          <span className="amount-add-meta">
+            {' '}
+            · total on board {formatMoney(amount)} (was {formatMoney(existing!.amount)})
+          </span>
+        </p>
+      ) : null}
+
       <div className="amount-stepper amount-editor" aria-label="Bid amount">
         <button
           type="button"
           aria-label="Decrease bid"
           onClick={() => bump(-1)}
-          disabled={amount <= minAllowed}
+          disabled={amount <= MIN_SPONSOR_BID}
         >
           −
         </button>
@@ -167,7 +180,7 @@ export function Hero({
             value={amountDisplay}
             onChange={(event) => handleAmountType(event.target.value)}
             onBlur={handleAmountBlur}
-            aria-label="Total bid amount on the board"
+            aria-label={isRaise ? 'Total bid on the board' : 'Bid amount'}
           />
         </label>
         <button type="button" aria-label="Increase bid" onClick={() => bump(1)}>
@@ -176,13 +189,16 @@ export function Hero({
       </div>
 
       <p className="hero-copy">
-        Bid any amount from {formatMoney(MIN_SPONSOR_BID)} — higher rank, higher spot.
-        {top
+        {isRaise
+          ? `Total bid on the board. You pay the difference — ${formatMoney(payNow)} now.`
+          : `Starts at ${formatMoney(DEFAULT_BID)}. Type any amount from ${formatMoney(MIN_SPONSOR_BID)}.`}
+        {top && !isRaise
           ? ` Outbid #1 for ${formatMoney(minToLead)} (${displayHost(top.website)} is at ${formatMoney(top.amount)}).`
           : ''}
+        {!validSite && !isRaise ? ' Paste your site below — logo loads live.' : ''}
         {isRaise && existing
-          ? ` Pay ${formatMoney(payNow)} now to raise ${displayHost(existing.website)} (#${existingRank}) to ${formatMoney(amount)}.`
-          : ' Paste your site below — logo loads live.'}
+          ? ` Raising ${displayHost(existing.website)} (#${existingRank}).`
+          : ''}
       </p>
 
       <form className="bid-bar" onSubmit={handleSubmit}>
@@ -228,7 +244,7 @@ export function Hero({
             <strong>{host}</strong>
             <p>
               {isRaise && existing
-                ? `Total bid ${formatMoney(amount)} · pay ${formatMoney(payNow)} now (was ${formatMoney(existing.amount)})`
+                ? `Adding ${formatMoney(payNow)} · total ${formatMoney(amount)} on board`
                 : beatsTop
                   ? `Takes #1 · total bid ${formatMoney(amount)}`
                   : `Projected #${projectedRank} · total bid ${formatMoney(amount)}`}
@@ -245,7 +261,7 @@ export function Hero({
         <p className="fineprint">
           {isRaise
             ? 'Raises only charge the difference. Same URL updates your listing.'
-            : 'New sites join at whatever amount you choose. Same URL later = raise only.'}
+            : `Default is ${formatMoney(DEFAULT_BID)}. You can bid as low as ${formatMoney(MIN_SPONSOR_BID)}.`}
         </p>
       )}
     </header>
