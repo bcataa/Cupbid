@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { BrandLogo } from './components/BrandLogo'
 import { Hero } from './components/Hero'
 import { HowItWorks } from './components/HowItWorks'
 import { Leaderboard } from './components/Leaderboard'
@@ -186,31 +187,9 @@ export default function App() {
       <PageBackground />
       <div className="app">
       <nav className="topnav" aria-label="Primary">
-        <button type="button" className="brand" onClick={goHome}>
-          <img
-            className="brand-mark"
-            src="/cupbid-logo.png"
-            alt=""
-            width={32}
-            height={32}
-          />
-          cupbid<span>.lol</span>
+        <button type="button" className="brand" onClick={goHome} aria-label="cupbid home">
+          <BrandLogo />
         </button>
-        <div className="nav-links">
-          {page === 'home' ? (
-            <>
-              <a href="#board">Leaderboard</a>
-              <a href="#how">How it works</a>
-            </>
-          ) : (
-            <button type="button" className="nav-text-btn" onClick={goHome}>
-              Board
-            </button>
-          )}
-          <button type="button" className="nav-text-btn" onClick={goStats}>
-            Stats
-          </button>
-        </div>
       </nav>
 
       {loadError ? (

@@ -162,8 +162,7 @@ a {
 .topnav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: center;
   margin-bottom: 28px;
   padding: 8px 0;
 }
@@ -171,7 +170,7 @@ a {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-decoration: none;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -181,8 +180,27 @@ a {
   padding: 0;
 }
 
-.brand span {
-  color: var(--accent);
+.brand-icon {
+  display: block;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(26, 24, 22, 0.08);
+}
+
+.brand-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.brand-name {
+  color: #1a1816;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
 .brand-mark {
@@ -945,10 +963,6 @@ a {
 
   .hero-perks li {
     font-size: 0.78rem;
-  }
-
-  .nav-links {
-    display: none;
   }
 
   .stats {
