@@ -788,6 +788,35 @@ a {
   color: var(--muted);
 }
 
+.share-site {
+  margin-bottom: 14px;
+}
+
+.share-site-label {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.share-site-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.share-btn {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--glass-border);
+  color: var(--text);
+  backdrop-filter: blur(8px);
+}
+
+.share-btn:hover {
+  background: rgba(255, 255, 255, 0.78);
+}
+
 .footer {
   text-align: center;
   color: var(--muted);

@@ -3,6 +3,8 @@ import { Hero } from './components/Hero'
 import { HowItWorks } from './components/HowItWorks'
 import { Leaderboard } from './components/Leaderboard'
 import { PageBackground } from './components/PageBackground'
+import { ShareCard } from './components/ShareCard'
+import { ShareSite } from './components/ShareSite'
 import { Stats } from './components/Stats'
 import { StatsPage } from './components/StatsPage'
 import {
@@ -35,6 +37,9 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [checkoutMessage, setCheckoutMessage] = useState('')
+  const [shareBid, setShareBid] = useState<{ website: string; rank: number } | null>(
+    null,
+  )
   const online = useOnlineCount()
 
   const refreshData = useCallback(async () => {
@@ -231,7 +236,7 @@ export default function App() {
       ) : loading ? (
         <p className="muted loading-board">Loading board…</p>
       ) : (
-        <>
+        <main id="main-content">
           <Hero
             key={
               characters[0]
@@ -244,7 +249,12 @@ export default function App() {
             visitors={visitors}
             onSeeStats={goStats}
             onSubmit={placeBid}
+            onBidSuccess={setShareBid}
           />
+
+          {shareBid ? (
+            <ShareCard website={shareBid.website} rank={shareBid.rank} />
+          ) : null}
 
           <div id="stats">
             <Stats
@@ -261,10 +271,11 @@ export default function App() {
           <div id="how">
             <HowItWorks />
           </div>
-        </>
+        </main>
       )}
 
       <footer className="footer">
+        <ShareSite />
         <p>cupbid.lol · Pay to rank your website · No bid limit</p>
       </footer>
       </div>

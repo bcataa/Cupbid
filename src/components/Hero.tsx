@@ -18,6 +18,7 @@ interface HeroProps {
   visitors: number
   onSeeStats: () => void
   onSubmit: (input: BidInput) => Promise<BidResult | BidError>
+  onBidSuccess?: (result: { website: string; rank: number }) => void
 }
 
 export function Hero({
@@ -27,6 +28,7 @@ export function Hero({
   visitors,
   onSeeStats,
   onSubmit,
+  onBidSuccess,
 }: HeroProps) {
   const minToLead = top ? top.amount + 1 : MIN_SPONSOR_BID
 
@@ -161,6 +163,11 @@ export function Hero({
       }
 
       if (result.checkoutUrl) return
+
+      onBidSuccess?.({
+        website: site,
+        rank: result.projectedRank ?? projectedRank,
+      })
 
       setWebsite('')
       setTagline('')
