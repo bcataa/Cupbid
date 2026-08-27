@@ -1,4 +1,4 @@
-import { MIN_SPONSOR_BID } from '../data/mockCharacters'
+import { MIN_SPONSOR_BID } from '../lib/constants'
 import { formatMoney } from '../lib/format'
 
 export function HowItWorks() {
@@ -6,7 +6,7 @@ export function HowItWorks() {
     <section className="how" aria-labelledby="how-title">
       <div className="section-head">
         <h2 id="how-title">How it works</h2>
-        <p>Skip expensive ads. Bid once, get on the board, get clicks.</p>
+        <p>Skip expensive ads. Pay once, get on the board, get clicks.</p>
       </div>
       <ol className="how-grid">
         <li>
@@ -23,8 +23,8 @@ export function HowItWorks() {
         <li>
           <strong>3. Get users</strong>
           <p>
-            Visitors see the leaderboard and click through to your site — real
-            traffic, not an ad auction.
+            After payment confirms, your site appears on the live leaderboard for
+            everyone to click.
           </p>
         </li>
       </ol>

@@ -19,7 +19,6 @@ export interface BidActivity {
 }
 
 export interface BidInput {
-  username: string
   website: string
   tagline: string
   amount: number
@@ -27,12 +26,9 @@ export interface BidInput {
 
 export interface BidResult {
   ok: true
-  rank: number
-  username: string
-  website: string
-  amount: number
-  demoted: Character | null
-  previousRank: number | null
+  checkoutUrl?: string
+  projectedRank?: number
+  free?: boolean
 }
 
 export interface BidError {

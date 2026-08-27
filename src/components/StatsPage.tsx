@@ -5,7 +5,7 @@ import type { BidActivity, Character } from '../types'
 interface StatsPageProps {
   characters: Character[]
   bids: BidActivity[]
-  visitors: number
+  pageViews: number
   online: number
   onBack: () => void
 }
@@ -32,13 +32,7 @@ function StatCard({
   )
 }
 
-export function StatsPage({
-  characters,
-  bids,
-  visitors,
-  online,
-  onBack,
-}: StatsPageProps) {
+export function StatsPage({ characters, bids, pageViews, online, onBack }: StatsPageProps) {
   const [now] = useState(() => Date.now())
 
   const metrics = useMemo(() => {
@@ -50,9 +44,6 @@ export function StatsPage({
     const paidHour = bidsHour.reduce((sum, bid) => sum + bid.paid, 0)
     const paidDay = bidsDay.reduce((sum, bid) => sum + bid.paid, 0)
     const biggest = bids.reduce((max, bid) => Math.max(max, bid.paid), 0)
-    const viewsAllTime = Math.max(visitors, paidAll * 120)
-    const viewsDay = Math.max(40, Math.round(viewsAllTime * 0.068))
-    const viewsHour = Math.max(6, Math.round(viewsDay * 0.022))
 
     return {
       bidsHour,
@@ -61,11 +52,8 @@ export function StatsPage({
       paidHour,
       paidDay,
       biggest,
-      viewsAllTime,
-      viewsDay,
-      viewsHour,
     }
-  }, [bids, visitors, now])
+  }, [bids, now])
 
   return (
     <div className="stats-page">
@@ -74,22 +62,25 @@ export function StatsPage({
           ← Back to board
         </button>
         <h1>Stats</h1>
-        <p className="muted">Live mock numbers from the board.</p>
+        <p className="muted">Real numbers from the database.</p>
       </header>
 
       <section className="stats-block" aria-labelledby="traffic-title">
         <div className="stats-block-head">
           <h2 id="traffic-title">Traffic</h2>
-          <p>Page views of the board and this page.</p>
+          <p>Page views tracked on cupbid.lol.</p>
         </div>
         <div className="stats-grid">
-          <StatCard label="Views, last 24h" value={formatCount(metrics.viewsDay)} />
-          <StatCard label="Views, this hour" value={formatCount(metrics.viewsHour)} />
-          <StatCard label="Views, all time" value={formatCount(metrics.viewsAllTime)} />
           <StatCard
             label="People here now"
             value={formatCount(online)}
-            note={`${formatCount(Math.max(online, metrics.viewsHour))} in the last hour`}
+            note="Live visitors on cupbid.lol right now"
+          />
+          <StatCard label="Page views, all time" value={formatCount(pageViews)} />
+          <StatCard label="Sites on board" value={formatCount(characters.length)} />
+          <StatCard
+            label="Bids, last 24h"
+            value={formatCount(metrics.bidsDay.length)}
           />
         </div>
       </section>
@@ -97,7 +88,7 @@ export function StatsPage({
       <section className="stats-block" aria-labelledby="money-title">
         <div className="stats-block-head">
           <h2 id="money-title">Money</h2>
-          <p>What people paid to climb the cup.</p>
+          <p>Confirmed payments from Supabase.</p>
         </div>
         <div className="stats-grid">
           <StatCard label="Sites ranked" value={formatCount(characters.length)} />
@@ -110,7 +101,11 @@ export function StatsPage({
           <StatCard
             label="Biggest single purchase"
             value={formatMoney(metrics.biggest)}
-            note={`${formatCount(metrics.biggest)} dollars in one checkout`}
+            note={
+              metrics.biggest > 0
+                ? `${formatCount(metrics.biggest)} dollars in one checkout`
+                : 'No payments yet'
+            }
           />
           <StatCard
             label="Revenue, last 24h"

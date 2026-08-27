@@ -1,7 +1,6 @@
 import { displayHost } from '../lib/format'
 
 interface ShareCardProps {
-  username: string
   website: string
   rank: number
 }

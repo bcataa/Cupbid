@@ -1,68 +1,104 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Hero } from './components/Hero'
 import { HowItWorks } from './components/HowItWorks'
 import { Leaderboard } from './components/Leaderboard'
-import { ShareCard } from './components/ShareCard'
 import { Stats } from './components/Stats'
 import { StatsPage } from './components/StatsPage'
 import {
-  INITIAL_BID_COUNT,
-  MIN_SPONSOR_BID,
-  MOCK_BID_HISTORY,
-  MOCK_CHARACTERS,
-} from './data/mockCharacters'
+  createBidCheckout,
+  fetchBids,
+  fetchLeaderboard,
+  fetchPageViews,
+  incrementPageViews,
+  placeFreeBid,
+  subscribeToLeaderboard,
+} from './lib/database'
+import { isSupabaseConfigured } from './lib/supabase'
 import {
-  displayHost,
   formatMoney,
   isValidWebsite,
-  normalizeUsername,
   normalizeWebsite,
-  sortByAmount,
   websiteKey,
 } from './lib/format'
+import { MIN_SPONSOR_BID } from './lib/constants'
+import { useOnlineCount } from './hooks/useOnlineCount'
 import type { BidActivity, BidError, BidInput, BidResult, Character } from './types'
 
 type Page = 'home' | 'stats'
 
 export default function App() {
   const [page, setPage] = useState<Page>('home')
-  const [characters, setCharacters] = useState<Character[]>(() =>
-    sortByAmount(MOCK_CHARACTERS),
-  )
-  const [bids, setBids] = useState<BidActivity[]>(() => [...MOCK_BID_HISTORY])
-  const [totalBids, setTotalBids] = useState(INITIAL_BID_COUNT)
-  const [flashId, setFlashId] = useState<string | null>(null)
-  const [lastWin, setLastWin] = useState<{
-    username: string
-    website: string
-    rank: number
-  } | null>(null)
-  const [demotion, setDemotion] = useState<{
-    victim: string
-    winner: string
-  } | null>(null)
-  const [visitors, setVisitors] = useState(1329753)
-  const [online] = useState(457)
+  const [characters, setCharacters] = useState<Character[]>([])
+  const [bids, setBids] = useState<BidActivity[]>([])
+  const [pageViews, setPageViews] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [checkoutMessage, setCheckoutMessage] = useState('')
+  const online = useOnlineCount()
+
+  const refreshData = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setLoadError('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.')
+      setLoading(false)
+      return
+    }
+
+    try {
+      const [nextCharacters, nextBids, views] = await Promise.all([
+        fetchLeaderboard(),
+        fetchBids(),
+        fetchPageViews(),
+      ])
+      setCharacters(nextCharacters)
+      setBids(nextBids)
+      setPageViews(views)
+      setLoadError('')
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to load board.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void refreshData()
+    const unsubscribe = subscribeToLeaderboard(() => {
+      void refreshData()
+    })
+    return unsubscribe
+  }, [refreshData])
+
+  useEffect(() => {
+    if (!isSupabaseConfigured) return
+    void incrementPageViews().then(setPageViews).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('checkout') === 'success') {
+      setCheckoutMessage('Payment received. Your bid will appear once confirmed.')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+    if (params.get('checkout') === 'cancelled') {
+      setCheckoutMessage('Checkout cancelled. No charge was made.')
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   const totalSpent = useMemo(
-    () => characters.reduce((sum, character) => sum + character.amount, 0),
-    [characters],
+    () => bids.reduce((sum, bid) => sum + bid.paid, 0),
+    [bids],
   )
 
   const placeBid = useCallback(
-    (input: BidInput): BidResult | BidError => {
+    async (input: BidInput): Promise<BidResult | BidError> => {
       const website = normalizeWebsite(input.website)
-      const username =
-        normalizeUsername(input.username) ||
-        displayHost(website).split('.')[0] ||
-        ''
       const tagline = input.tagline.trim()
       const amount = input.amount
 
       if (!isValidWebsite(website)) {
         return { ok: false, error: 'Enter a valid website URL.' }
       }
-      if (!username) return { ok: false, error: 'Enter a valid website URL.' }
       if (!tagline) return { ok: false, error: 'Add a one-line pitch.' }
       if (!Number.isFinite(amount) || !Number.isInteger(amount)) {
         return { ok: false, error: 'Enter a whole-dollar amount.' }
@@ -75,87 +111,58 @@ export default function App() {
       }
 
       const key = websiteKey(website)
-      const existing =
-        characters.find((c) => websiteKey(c.website) === key) ??
-        characters.find((c) => c.username === username) ??
-        null
-      const previousRank = existing
-        ? characters.findIndex((c) => c.id === existing.id) + 1
-        : null
-      const previousLeader = characters[0] ?? null
-      const previousAmount = existing?.amount ?? 0
-
+      const existing = characters.find((c) => websiteKey(c.website) === key) ?? null
       if (existing && amount <= existing.amount) {
         return {
           ok: false,
-          error: `Raise at least $1 above your current ${formatMoney(existing.amount)}.`,
+          error: `Raise at least $1 above the current ${formatMoney(existing.amount)}.`,
         }
       }
 
-      const nextCharacter: Character = existing
-        ? {
-            ...existing,
-            amount,
-            website,
-            tagline,
-            username: existing.username,
-          }
-        : { id: crypto.randomUUID(), username, website, tagline, amount }
-
-      const nextList = sortByAmount([
-        ...characters.filter((c) => c.id !== nextCharacter.id),
-        nextCharacter,
-      ])
-
-      const rank = nextList.findIndex((c) => c.id === nextCharacter.id) + 1
-      const newLeader = nextList[0]
-      const demoted =
-        previousLeader &&
-        newLeader &&
-        previousLeader.id !== newLeader.id &&
-        newLeader.id === nextCharacter.id
-          ? previousLeader
-          : null
-
-      const activity: BidActivity = {
-        id: crypto.randomUUID(),
-        username,
+      // Free test bids first (no Stripe). Falls back to checkout when free mode is off.
+      const freeResult = await placeFreeBid({
         website,
+        websiteKey: key,
+        tagline,
         amount,
-        paid: amount - previousAmount,
-        rank,
-        previousRank,
-        tookCup: Boolean(demoted) || (rank === 1 && previousRank !== 1),
-        createdAt: Date.now(),
+      })
+
+      if (!freeResult.error) {
+        await refreshData()
+        return {
+          ok: true,
+          free: true,
+          projectedRank: freeResult.projectedRank,
+        }
       }
 
-      setCharacters(nextList)
-      setBids((prev) => [activity, ...prev])
-      setTotalBids((count) => count + 1)
-      setVisitors((count) => count + Math.floor(Math.random() * 3) + 1)
-      setFlashId(nextCharacter.id)
-      setLastWin({ username, website, rank })
-      setDemotion(
-        demoted
-          ? {
-              victim: displayHost(demoted.website),
-              winner: displayHost(website),
-            }
-          : null,
-      )
-      window.setTimeout(() => setFlashId(null), 1200)
+      const freeDisabled = /disabled|stripe/i.test(freeResult.error)
+      if (!freeDisabled) {
+        return { ok: false, error: freeResult.error }
+      }
+
+      const result = await createBidCheckout({ website, tagline, amount })
+
+      if (result.error) {
+        return { ok: false, error: result.error }
+      }
+
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl
+        return { ok: true, checkoutUrl: result.checkoutUrl, projectedRank: result.projectedRank }
+      }
+
+      if (result.free) {
+        await refreshData()
+        return { ok: true, free: true, projectedRank: result.projectedRank }
+      }
 
       return {
-        ok: true,
-        rank,
-        username,
-        website,
-        amount,
-        demoted,
-        previousRank,
+        ok: false,
+        error: 'Payments are not live yet. Stripe is being connected.',
       }
     },
-    [characters],
+    [characters, refreshData],
   )
 
   const goHome = () => {
@@ -198,22 +205,40 @@ export default function App() {
         </div>
       </nav>
 
+      {loadError ? (
+        <aside className="config-banner" role="alert">
+          <p>{loadError}</p>
+        </aside>
+      ) : null}
+
+      {checkoutMessage ? (
+        <aside className="config-banner is-soft" role="status">
+          <p>{checkoutMessage}</p>
+        </aside>
+      ) : null}
+
       {page === 'stats' ? (
         <StatsPage
           characters={characters}
           bids={bids}
-          visitors={visitors}
+          pageViews={pageViews}
           online={online}
           onBack={goHome}
         />
+      ) : loading ? (
+        <p className="muted loading-board">Loading board…</p>
       ) : (
         <>
           <Hero
-            key={characters[0]?.id ?? 'empty'}
+            key={
+              characters[0]
+                ? `${characters[0].id}-${characters[0].amount}`
+                : 'empty'
+            }
             top={characters[0] ?? null}
             characters={characters}
             online={online}
-            visitors={visitors}
+            pageViews={pageViews}
             onSeeStats={goStats}
             onSubmit={placeBid}
           />
@@ -222,34 +247,17 @@ export default function App() {
             <Stats
               totalCharacters={characters.length}
               totalSpent={totalSpent}
-              totalBids={totalBids}
+              totalBids={bids.length}
             />
           </div>
 
           <div id="board">
-            <Leaderboard characters={characters} flashId={flashId} />
+            <Leaderboard characters={characters} flashId={null} />
           </div>
 
           <div id="how">
             <HowItWorks />
           </div>
-
-          {demotion ? (
-            <aside className="demotion" role="status" aria-live="assertive">
-              <p className="demotion-title">💀 You&apos;ve been demoted.</p>
-              <p>
-                {demotion.winner} just took the cup from {demotion.victim}.
-              </p>
-            </aside>
-          ) : null}
-
-          {lastWin ? (
-            <ShareCard
-              username={lastWin.username}
-              website={lastWin.website}
-              rank={lastWin.rank}
-            />
-          ) : null}
         </>
       )}
 

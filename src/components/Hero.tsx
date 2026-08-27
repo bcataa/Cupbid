@@ -1,5 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react'
-import { MIN_SPONSOR_BID } from '../data/mockCharacters'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { MIN_SPONSOR_BID } from '../lib/constants'
 import {
   displayHost,
   formatMoney,
@@ -15,16 +15,16 @@ interface HeroProps {
   top: Character | null
   characters: Character[]
   online: number
-  visitors: number
+  pageViews: number
   onSeeStats: () => void
-  onSubmit: (input: BidInput) => BidResult | BidError
+  onSubmit: (input: BidInput) => Promise<BidResult | BidError>
 }
 
 export function Hero({
   top,
   characters,
   online,
-  visitors,
+  pageViews,
   onSeeStats,
   onSubmit,
 }: HeroProps) {
@@ -35,6 +35,7 @@ export function Hero({
   const [website, setWebsite] = useState('')
   const [tagline, setTagline] = useState('')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const normalizedSite = website.trim() ? normalizeWebsite(website) : ''
   const validSite = Boolean(normalizedSite && isValidWebsite(normalizedSite))
@@ -48,12 +49,19 @@ export function Hero({
 
   const isRaise = Boolean(existing)
   const minAllowed = existing ? existing.amount + 1 : MIN_SPONSOR_BID
-  const suggestedBid = Math.max(minAllowed, minToLead)
-  const amount = Math.max(minAllowed, manualAmount ?? suggestedBid)
+  const amount = Math.max(minAllowed, manualAmount ?? minToLead)
   const amountDisplay = amountText ?? String(amount)
   const existingRank = existing
     ? characters.findIndex((c) => c.id === existing.id) + 1
     : null
+
+  // When #1 changes or gets outbid, snap back to the new amount needed to take #1
+  useEffect(() => {
+    if (manualAmount !== null && manualAmount < minToLead) {
+      setManualAmount(null)
+      setAmountText(null)
+    }
+  }, [minToLead, manualAmount])
 
   const projectedRank = useMemo(() => {
     const others = characters.filter((c) => !existing || c.id !== existing.id)
@@ -61,7 +69,7 @@ export function Hero({
   }, [characters, existing, amount])
 
   const beatsTop = Boolean(
-    top && amount > top.amount && (!existing || existing.id !== top.id),
+    top && amount >= minToLead && (!existing || existing.id !== top.id),
   )
 
   const setBidAmount = (value: number) => {
@@ -84,7 +92,9 @@ export function Hero({
   }
 
   const handleAmountBlur = () => {
-    setBidAmount(amount || minAllowed)
+    const next = Math.max(minAllowed, amount || minAllowed)
+    setManualAmount(next)
+    setAmountText(null)
   }
 
   const handleWebsiteChange = (value: string) => {
@@ -101,33 +111,41 @@ export function Hero({
     }
   }
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
-    const site = normalizeWebsite(website)
-    const handle = isValidWebsite(site)
-      ? (displayHost(site).split('.')[0] ?? '')
-      : ''
-    const finalAmount = Math.max(minAllowed, amount || minAllowed)
-    const result = onSubmit({
-      username: handle,
-      website: site,
-      tagline: tagline || `Sponsored ${displayHost(site)}`,
-      amount: finalAmount,
-    })
-    if (!result.ok) {
-      setError(result.error)
-      return
-    }
+
+    setBusy(true)
     setError('')
-    setWebsite('')
-    setTagline('')
-    setManualAmount(null)
-    setAmountText(null)
+
+    const site = normalizeWebsite(website)
+    const finalAmount = Math.max(minAllowed, amount || minToLead)
+
+    try {
+      const result = await onSubmit({
+        website: site,
+        tagline: tagline || `Sponsored ${displayHost(site)}`,
+        amount: finalAmount,
+      })
+
+      if (!result.ok) {
+        setError(result.error)
+        return
+      }
+
+      if (result.checkoutUrl) return
+
+      setWebsite('')
+      setTagline('')
+      setManualAmount(null)
+      setAmountText(null)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
     <header className="hero">
-      <LiveStatsPill online={online} visitors={visitors} onSeeStats={onSeeStats} />
+      <LiveStatsPill online={online} pageViews={pageViews} onSeeStats={onSeeStats} />
 
       <h1 className="claim-title">
         {isRaise ? 'Raise your bid' : 'Pay for the cup'}
@@ -164,7 +182,7 @@ export function Hero({
       </div>
 
       <p className="hero-copy">
-        {formatMoney(suggestedBid)} takes #1 right now
+        {formatMoney(minToLead)} to outbid #1
         {top ? ` · ${displayHost(top.website)} is at ${formatMoney(top.amount)}` : ''}.
         {isRaise && existing
           ? ` You’re raising ${displayHost(existing.website)} (#${existingRank}).`
@@ -198,12 +216,14 @@ export function Hero({
           onChange={(event) => setTagline(event.target.value)}
           aria-label="Pitch"
         />
-        <button type="submit" className="btn primary">
-          {beatsTop || amount >= minToLead
-            ? `Pay ${formatMoney(amount)}`
-            : isRaise
-              ? `Raise to ${formatMoney(amount)}`
-              : `Pay ${formatMoney(amount)}`}
+        <button type="submit" className="btn primary" disabled={busy}>
+          {busy
+            ? 'Saving…'
+            : beatsTop
+              ? `Pay ${formatMoney(amount)} · take #1`
+              : isRaise
+                ? `Raise to ${formatMoney(amount)}`
+                : `Pay ${formatMoney(amount)}`}
         </button>
       </form>
 
@@ -215,7 +235,9 @@ export function Hero({
             <p>
               {isRaise && existing
                 ? `Current #${existingRank} · ${formatMoney(existing.amount)} → ${formatMoney(amount)}`
-                : `You’ll land around #${projectedRank} for ${formatMoney(amount)}`}
+                : amount >= minToLead
+                  ? `Takes #1 for ${formatMoney(amount)}`
+                  : `You’ll land around #${projectedRank} for ${formatMoney(amount)}`}
             </p>
           </div>
         </div>
@@ -227,7 +249,8 @@ export function Hero({
         </p>
       ) : (
         <p className="fineprint">
-          One payment. Your site stays on the board. Same URL raises your rank.
+          Amount defaults to outbid #1. Same website URL raises your listing.
+          Test mode: bids are free until Stripe is connected.
         </p>
       )}
     </header>
