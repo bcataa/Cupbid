@@ -12,6 +12,10 @@
   --accent-ink: #ffffff;
   --ok: #22c55e;
   --shadow: 0 10px 30px rgba(26, 24, 22, 0.06);
+  --glass-bg: rgba(255, 255, 255, 0.48);
+  --glass-bg-strong: rgba(255, 255, 255, 0.58);
+  --glass-border: rgba(232, 93, 76, 0.18);
+  --glass-shadow: 0 14px 36px rgba(232, 93, 76, 0.08);
   color-scheme: light;
 }
 
@@ -95,6 +99,24 @@ body {
   animation-delay: -12s;
 }
 
+.page-bg-glow-bottom {
+  bottom: -8%;
+  left: 50%;
+  width: min(88vw, 720px);
+  height: 420px;
+  margin-left: calc(min(88vw, 720px) / -2);
+  background: radial-gradient(
+    ellipse 75% 70% at 50% 60%,
+    rgba(255, 200, 175, 0.42) 0%,
+    rgba(232, 93, 76, 0.1) 50%,
+    transparent 75%
+  );
+  filter: blur(56px);
+  opacity: 0.9;
+  animation: bg-drift 26s ease-in-out infinite;
+  animation-delay: -9s;
+}
+
 .page-bg-grid {
   position: absolute;
   inset: 0;
@@ -102,7 +124,8 @@ body {
     linear-gradient(rgba(232, 93, 76, 0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(232, 93, 76, 0.07) 1px, transparent 1px);
   background-size: 40px 40px;
-  mask-image: radial-gradient(ellipse 95% 85% at 50% 22%, #000 25%, transparent 88%);
+  mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
+  opacity: 0.95;
 }
 
 @keyframes bg-drift {
@@ -546,9 +569,11 @@ a {
 
 .stats > div {
   padding: 16px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-border);
   border-radius: 16px;
-  background: var(--panel);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--glass-shadow);
 }
 
 .stats strong {
@@ -579,10 +604,12 @@ a {
 
 .board {
   list-style: none;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-border);
   border-radius: 18px;
   overflow: hidden;
-  background: var(--panel);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--glass-shadow);
 }
 
 .row {
@@ -591,7 +618,7 @@ a {
   gap: 12px;
   align-items: center;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid rgba(232, 93, 76, 0.12);
   background: transparent;
   transition: background 0.25s ease, transform 0.25s ease;
 }
@@ -610,10 +637,12 @@ a {
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: #f3f0ec;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid rgba(232, 93, 76, 0.12);
   color: var(--muted);
   font-size: 0.82rem;
   font-weight: 700;
+  backdrop-filter: blur(8px);
 }
 
 .avatar {
@@ -698,9 +727,11 @@ a {
 
 .how-grid li {
   padding: 16px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--glass-border);
   border-radius: 16px;
-  background: var(--panel);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--glass-shadow);
 }
 
 .how-grid strong {
@@ -738,10 +769,11 @@ a {
   margin-bottom: 24px;
   padding: 22px;
   border-radius: 18px;
-  border: 1px solid var(--line);
-  background: var(--panel);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
   text-align: center;
-  box-shadow: var(--shadow);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(12px);
   animation: rise 0.35s ease;
 }
 
@@ -816,12 +848,13 @@ a {
 }
 
 .stat-card {
-  background: #fff;
-  border: 1px solid var(--line);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 18px;
   padding: 18px 16px;
   min-height: 112px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(12px);
 }
 
 .stat-card-label {
@@ -845,10 +878,11 @@ a {
 
 @keyframes flash {
   0% {
-    background: #fff7e8;
+    background: rgba(255, 235, 210, 0.65);
     transform: scale(1.01);
   }
   100% {
+    background: transparent;
     transform: scale(1);
   }
 }
@@ -932,8 +966,9 @@ a {
 }
 
 .config-banner.is-soft {
-  background: var(--panel);
-  border-color: var(--line);
+  background: var(--glass-bg);
+  border-color: var(--glass-border);
+  backdrop-filter: blur(10px);
 }
 
 .auth-overlay {

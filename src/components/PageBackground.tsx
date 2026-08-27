@@ -5,6 +5,7 @@ export function PageBackground() {
       <div className="page-bg-glow page-bg-glow-top" />
       <div className="page-bg-glow page-bg-glow-left" />
       <div className="page-bg-glow page-bg-glow-right" />
+      <div className="page-bg-glow page-bg-glow-bottom" />
       <div className="page-bg-grid" />
     </div>
   )
