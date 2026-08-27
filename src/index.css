@@ -840,7 +840,17 @@ a {
 }
 
 .logo-gallery {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+  padding: 20px 16px 22px;
+  border: 1px solid var(--glass-border);
+  border-radius: 22px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--glass-shadow);
+}
+
+.logo-gallery .section-head h2 {
+  font-size: 1.35rem;
 }
 
 .logo-gallery-grid {
@@ -852,10 +862,10 @@ a {
 }
 
 .logo-gallery-card {
-  padding: 18px 14px;
+  padding: 20px 14px;
   border: 1px solid var(--glass-border);
   border-radius: 18px;
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.62);
   backdrop-filter: blur(12px);
   box-shadow: var(--glass-shadow);
   text-align: center;
@@ -865,10 +875,25 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
-  padding: 10px 14px;
+  margin-bottom: 14px;
+  padding: 12px 16px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(232, 93, 76, 0.08);
+}
+
+.logo-gallery-preview .brand-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.logo-gallery-preview .brand-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.logo-gallery-preview .brand-name {
+  font-size: 1.5rem;
 }
 
 .logo-gallery-card strong {
@@ -911,28 +936,11 @@ a {
 }
 
 .logo-gallery-image-grid figcaption {
-  padding: 8px 10px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  text-align: center;
-}
-
-.footer-link {
-  display: inline-block;
-  margin-bottom: 10px;
-  border: 0;
-  background: transparent;
-  color: var(--accent);
-  font: inherit;
-  font-size: 0.86rem;
-  font-weight: 600;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.footer-link:hover {
+  padding: 10px 10px 12px;
   color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .footer {

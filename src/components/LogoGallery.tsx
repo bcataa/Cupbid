@@ -93,15 +93,17 @@ const OPTIONS = [
   },
 ] as const
 
-export function LogoGallery({ onBack }: { onBack: () => void }) {
+export function LogoGallery({ onBack }: { onBack?: () => void }) {
   return (
-    <section className="logo-gallery" aria-labelledby="logo-gallery-title">
-      <button type="button" className="stats-back" onClick={onBack}>
-        ← Back to board
-      </button>
+    <section className="logo-gallery" id="logos" aria-labelledby="logo-gallery-title">
+      {onBack ? (
+        <button type="button" className="stats-back" onClick={onBack}>
+          ← Back to board
+        </button>
+      ) : null}
       <div className="section-head">
-        <h2 id="logo-gallery-title">Logo options</h2>
-        <p>Pick a direction — tell me the name (e.g. “Ring mark” or “Cup trophy”).</p>
+        <h2 id="logo-gallery-title">Pick a logo</h2>
+        <p>These are live previews — tell me which one you want in the top bar.</p>
       </div>
 
       <ul className="logo-gallery-grid">
