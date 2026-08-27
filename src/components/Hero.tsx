@@ -153,16 +153,6 @@ export function Hero({
         people will click through.
       </p>
 
-      {isRaise && validSite ? (
-        <p className="amount-add-now" aria-live="polite">
-          Adding <strong>{formatMoney(payNow)}</strong> now
-          <span className="amount-add-meta">
-            {' '}
-            · total on board {formatMoney(amount)} (was {formatMoney(existing!.amount)})
-          </span>
-        </p>
-      ) : null}
-
       <div className="amount-stepper amount-editor" aria-label="Bid amount">
         <button
           type="button"
@@ -187,19 +177,6 @@ export function Hero({
           +
         </button>
       </div>
-
-      <p className="hero-copy">
-        {isRaise
-          ? `Total bid on the board. You pay the difference — ${formatMoney(payNow)} now.`
-          : `Starts at ${formatMoney(DEFAULT_BID)}. Type any amount from ${formatMoney(MIN_SPONSOR_BID)}.`}
-        {top && !isRaise
-          ? ` Outbid #1 for ${formatMoney(minToLead)} (${displayHost(top.website)} is at ${formatMoney(top.amount)}).`
-          : ''}
-        {!validSite && !isRaise ? ' Paste your site below — logo loads live.' : ''}
-        {isRaise && existing
-          ? ` Raising ${displayHost(existing.website)} (#${existingRank}).`
-          : ''}
-      </p>
 
       <form className="bid-bar" onSubmit={handleSubmit}>
         <div className="bid-site">
@@ -244,10 +221,10 @@ export function Hero({
             <strong>{host}</strong>
             <p>
               {isRaise && existing
-                ? `Adding ${formatMoney(payNow)} · total ${formatMoney(amount)} on board`
+                ? `#${existingRank} · ${formatMoney(existing.amount)} → ${formatMoney(amount)}`
                 : beatsTop
-                  ? `Takes #1 · total bid ${formatMoney(amount)}`
-                  : `Projected #${projectedRank} · total bid ${formatMoney(amount)}`}
+                  ? `Takes #1 · ${formatMoney(amount)}`
+                  : `Projected #${projectedRank} · ${formatMoney(amount)}`}
             </p>
           </div>
         </div>
@@ -257,13 +234,7 @@ export function Hero({
         <p className="error" role="alert">
           {error}
         </p>
-      ) : (
-        <p className="fineprint">
-          {isRaise
-            ? 'Raises only charge the difference. Same URL updates your listing.'
-            : `Default is ${formatMoney(DEFAULT_BID)}. You can bid as low as ${formatMoney(MIN_SPONSOR_BID)}.`}
-        </p>
-      )}
+      ) : null}
     </header>
   )
 }
