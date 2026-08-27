@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Hero } from './components/Hero'
 import { HowItWorks } from './components/HowItWorks'
 import { Leaderboard } from './components/Leaderboard'
+import { PageBackground } from './components/PageBackground'
 import { Stats } from './components/Stats'
 import { StatsPage } from './components/StatsPage'
 import {
@@ -176,7 +177,9 @@ export default function App() {
   }
 
   return (
-    <div className="app">
+    <>
+      <PageBackground />
+      <div className="app">
       <nav className="topnav" aria-label="Primary">
         <button type="button" className="brand" onClick={goHome}>
           <img
@@ -264,6 +267,7 @@ export default function App() {
       <footer className="footer">
         <p>cupbid.lol · Pay to rank your website · No bid limit</p>
       </footer>
-    </div>
+      </div>
+    </>
   )
 }
