@@ -3,7 +3,6 @@ import { BrandLogo } from './components/BrandLogo'
 import { Hero } from './components/Hero'
 import { HowItWorks } from './components/HowItWorks'
 import { Leaderboard } from './components/Leaderboard'
-import { LogoGallery } from './components/LogoGallery'
 import { PageBackground } from './components/PageBackground'
 import { ShareCard } from './components/ShareCard'
 import { ShareSite } from './components/ShareSite'
@@ -217,8 +216,6 @@ export default function App() {
         <p className="muted loading-board">Loading board…</p>
       ) : (
         <main id="main-content">
-          <LogoGallery />
-
           <Hero
             key={
               characters[0]

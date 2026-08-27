@@ -173,11 +173,26 @@ a {
   gap: 10px;
   text-decoration: none;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  font-size: 1.35rem;
+  letter-spacing: -0.04em;
   border: 0;
   background: transparent;
   cursor: pointer;
   padding: 0;
+  color: #1a1816;
+}
+
+.brand span {
+  color: var(--accent);
+}
+
+.brand-mark {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+  flex-shrink: 0;
 }
 
 .brand-icon {
@@ -201,14 +216,6 @@ a {
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
-}
-
-.brand-mark {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  object-fit: cover;
-  display: block;
 }
 
 .nav-links {
