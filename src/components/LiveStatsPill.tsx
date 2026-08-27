@@ -1,6 +1,6 @@
 interface LiveStatsPillProps {
   online: number
-  pageViews: number
+  visitors: number
   onSeeStats: () => void
 }
 
@@ -8,7 +8,7 @@ function formatCount(value: number) {
   return new Intl.NumberFormat('en-US').format(value)
 }
 
-export function LiveStatsPill({ online, pageViews, onSeeStats }: LiveStatsPillProps) {
+export function LiveStatsPill({ online, visitors, onSeeStats }: LiveStatsPillProps) {
   return (
     <button
       type="button"
@@ -24,7 +24,7 @@ export function LiveStatsPill({ online, pageViews, onSeeStats }: LiveStatsPillPr
         ·
       </span>
       <span className="live-stats-visitors">
-        {formatCount(pageViews)} visitors since launch
+        {formatCount(visitors)} visitors since launch
       </span>
       <span className="live-stats-sep" aria-hidden="true">
         ·

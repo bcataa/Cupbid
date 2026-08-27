@@ -84,23 +84,35 @@ export async function fetchBids(): Promise<BidActivity[]> {
   return (data ?? []).map(bidToActivity)
 }
 
-export async function fetchPageViews(): Promise<number> {
+export function getVisitorId(): string {
+  const key = 'cupbid_visitor_id'
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem(key, id)
+  }
+  return id
+}
+
+export async function fetchVisitors(): Promise<number> {
   if (!isSupabaseConfigured) return 0
 
   const { data, error } = await supabase
     .from('site_metrics')
-    .select('page_views')
+    .select('unique_visitors, page_views')
     .eq('id', 'global')
     .maybeSingle()
 
   if (error) throw error
-  return data?.page_views ?? 0
+  return data?.unique_visitors ?? data?.page_views ?? 0
 }
 
-export async function incrementPageViews(): Promise<number> {
+export async function trackUniqueVisitor(): Promise<number> {
   if (!isSupabaseConfigured) return 0
 
-  const { data, error } = await supabase.rpc('increment_page_views')
+  const { data, error } = await supabase.rpc('track_unique_visitor', {
+    p_visitor_id: getVisitorId(),
+  })
   if (error) throw error
   return data ?? 0
 }

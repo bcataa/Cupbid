@@ -5,7 +5,7 @@ import type { BidActivity, Character } from '../types'
 interface StatsPageProps {
   characters: Character[]
   bids: BidActivity[]
-  pageViews: number
+  visitors: number
   online: number
   onBack: () => void
 }
@@ -32,7 +32,7 @@ function StatCard({
   )
 }
 
-export function StatsPage({ characters, bids, pageViews, online, onBack }: StatsPageProps) {
+export function StatsPage({ characters, bids, visitors, online, onBack }: StatsPageProps) {
   const [now] = useState(() => Date.now())
 
   const metrics = useMemo(() => {
@@ -76,7 +76,7 @@ export function StatsPage({ characters, bids, pageViews, online, onBack }: Stats
             value={formatCount(online)}
             note="Live visitors on cupbid.lol right now"
           />
-          <StatCard label="Page views, all time" value={formatCount(pageViews)} />
+          <StatCard label="Visitors, all time" value={formatCount(visitors)} />
           <StatCard label="Sites on board" value={formatCount(characters.length)} />
           <StatCard
             label="Bids, last 24h"

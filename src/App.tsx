@@ -8,10 +8,10 @@ import {
   createBidCheckout,
   fetchBids,
   fetchLeaderboard,
-  fetchPageViews,
-  incrementPageViews,
+  fetchVisitors,
   placeFreeBid,
   subscribeToLeaderboard,
+  trackUniqueVisitor,
 } from './lib/database'
 import { isSupabaseConfigured } from './lib/supabase'
 import {
@@ -30,7 +30,7 @@ export default function App() {
   const [page, setPage] = useState<Page>('home')
   const [characters, setCharacters] = useState<Character[]>([])
   const [bids, setBids] = useState<BidActivity[]>([])
-  const [pageViews, setPageViews] = useState(0)
+  const [visitors, setVisitors] = useState(0)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [checkoutMessage, setCheckoutMessage] = useState('')
@@ -44,14 +44,14 @@ export default function App() {
     }
 
     try {
-      const [nextCharacters, nextBids, views] = await Promise.all([
+      const [nextCharacters, nextBids, visitorCount] = await Promise.all([
         fetchLeaderboard(),
         fetchBids(),
-        fetchPageViews(),
+        fetchVisitors(),
       ])
       setCharacters(nextCharacters)
       setBids(nextBids)
-      setPageViews(views)
+      setVisitors(visitorCount)
       setLoadError('')
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load board.')
@@ -70,7 +70,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isSupabaseConfigured) return
-    void incrementPageViews().then(setPageViews).catch(() => {})
+    void trackUniqueVisitor().then(setVisitors).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -221,7 +221,7 @@ export default function App() {
         <StatsPage
           characters={characters}
           bids={bids}
-          pageViews={pageViews}
+          visitors={visitors}
           online={online}
           onBack={goHome}
         />
@@ -238,7 +238,7 @@ export default function App() {
             top={characters[0] ?? null}
             characters={characters}
             online={online}
-            pageViews={pageViews}
+            visitors={visitors}
             onSeeStats={goStats}
             onSubmit={placeBid}
           />
