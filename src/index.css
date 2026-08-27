@@ -265,14 +265,6 @@ a {
   background: #fff;
 }
 
-.hero-copy {
-  margin: 14px auto 0;
-  max-width: 34rem;
-  color: var(--muted);
-  font-size: 0.95rem;
-  line-height: 1.45;
-}
-
 .bid-bar {
   margin: 22px auto 0;
   display: grid;
@@ -405,17 +397,9 @@ a {
   box-shadow: 0 8px 20px rgba(232, 93, 76, 0.28);
 }
 
-.fineprint,
 .error {
   margin-top: 12px;
   font-size: 0.9rem;
-}
-
-.fineprint {
-  color: var(--muted);
-}
-
-.error {
   color: var(--accent);
 }
 
