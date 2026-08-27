@@ -3,6 +3,7 @@ import { BrandLogo } from './components/BrandLogo'
 import { Hero } from './components/Hero'
 import { HowItWorks } from './components/HowItWorks'
 import { Leaderboard } from './components/Leaderboard'
+import { LogoGallery } from './components/LogoGallery'
 import { PageBackground } from './components/PageBackground'
 import { ShareCard } from './components/ShareCard'
 import { ShareSite } from './components/ShareSite'
@@ -28,7 +29,7 @@ import { MIN_SPONSOR_BID } from './lib/constants'
 import { useOnlineCount } from './hooks/useOnlineCount'
 import type { BidActivity, BidError, BidInput, BidResult, Character } from './types'
 
-type Page = 'home' | 'stats'
+type Page = 'home' | 'stats' | 'logos'
 
 export default function App() {
   const [page, setPage] = useState<Page>('home')
@@ -182,6 +183,11 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  const goLogos = () => {
+    setPage('logos')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <>
       <PageBackground />
@@ -212,6 +218,8 @@ export default function App() {
           online={online}
           onBack={goHome}
         />
+      ) : page === 'logos' ? (
+        <LogoGallery onBack={goHome} />
       ) : loading ? (
         <p className="muted loading-board">Loading board…</p>
       ) : (
@@ -255,6 +263,9 @@ export default function App() {
 
       <footer className="footer">
         <ShareSite />
+        <button type="button" className="footer-link" onClick={goLogos}>
+          Logo options
+        </button>
         <p>cupbid.lol · Pay to rank your website · No bid limit</p>
       </footer>
       </div>

@@ -835,6 +835,106 @@ a {
   background: rgba(255, 255, 255, 0.78);
 }
 
+.brand-name.is-split span {
+  color: var(--accent);
+}
+
+.logo-gallery {
+  margin-bottom: 32px;
+}
+
+.logo-gallery-grid {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.logo-gallery-card {
+  padding: 18px 14px;
+  border: 1px solid var(--glass-border);
+  border-radius: 18px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--glass-shadow);
+  text-align: center;
+}
+
+.logo-gallery-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.logo-gallery-card strong {
+  display: block;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+
+.logo-gallery-card p {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.logo-gallery-images {
+  margin-top: 8px;
+}
+
+.logo-gallery-image-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.logo-gallery-image-grid figure {
+  margin: 0;
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+}
+
+.logo-gallery-image-grid img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.logo-gallery-image-grid figcaption {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.footer-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.footer-link:hover {
+  color: var(--text);
+}
+
 .footer {
   text-align: center;
   color: var(--muted);
@@ -947,7 +1047,8 @@ a {
 
 @media (max-width: 760px) {
   .bid-bar,
-  .how-grid {
+  .how-grid,
+  .logo-gallery-grid {
     grid-template-columns: 1fr;
   }
 
