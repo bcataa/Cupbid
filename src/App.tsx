@@ -9,9 +9,16 @@ import { ShareSite } from './components/ShareSite'
 import { Stats } from './components/Stats'
 import { StatsPage } from './components/StatsPage'
 import {
+  clearPendingCheckout,
+  readPendingCheckout,
+  savePendingCheckout,
+  sleep,
+} from './lib/checkout'
+import {
   createBidCheckout,
   fetchBids,
   fetchLeaderboard,
+  fetchSiteConfig,
   fetchVisitors,
   placeFreeBid,
   subscribeToLeaderboard,
@@ -35,12 +42,15 @@ export default function App() {
   const [characters, setCharacters] = useState<Character[]>([])
   const [bids, setBids] = useState<BidActivity[]>([])
   const [visitors, setVisitors] = useState(0)
+  const [freeBidsEnabled, setFreeBidsEnabled] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [checkoutMessage, setCheckoutMessage] = useState('')
   const [shareBid, setShareBid] = useState<{ website: string; rank: number } | null>(
     null,
   )
+  const [flashId, setFlashId] = useState<string | null>(null)
+  const [raiseWebsite, setRaiseWebsite] = useState<string | null>(null)
   const online = useOnlineCount()
 
   const refreshData = useCallback(async () => {
@@ -51,17 +61,21 @@ export default function App() {
     }
 
     try {
-      const [nextCharacters, nextBids, visitorCount] = await Promise.all([
+      const [nextCharacters, nextBids, visitorCount, siteConfig] = await Promise.all([
         fetchLeaderboard(),
         fetchBids(),
         fetchVisitors(),
+        fetchSiteConfig(),
       ])
       setCharacters(nextCharacters)
       setBids(nextBids)
       setVisitors(visitorCount)
+      setFreeBidsEnabled(siteConfig.freeBidsEnabled)
       setLoadError('')
+      return nextCharacters
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load board.')
+      return null
     } finally {
       setLoading(false)
     }
@@ -82,15 +96,45 @@ export default function App() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    if (params.get('checkout') === 'success') {
-      setCheckoutMessage('Payment received. Your bid will appear once confirmed.')
-      window.history.replaceState({}, '', window.location.pathname)
-    }
-    if (params.get('checkout') === 'cancelled') {
+    const checkout = params.get('checkout')
+
+    if (checkout === 'cancelled') {
+      clearPendingCheckout()
       setCheckoutMessage('Checkout cancelled. No charge was made.')
       window.history.replaceState({}, '', window.location.pathname)
+      return
     }
-  }, [])
+
+    if (checkout !== 'success') return
+
+    window.history.replaceState({}, '', window.location.pathname)
+    const pending = readPendingCheckout()
+
+    void (async () => {
+      setCheckoutMessage('Payment received — confirming your spot on the board…')
+
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const nextCharacters = await refreshData()
+        if (pending && nextCharacters) {
+          const key = websiteKey(pending.website)
+          const match = nextCharacters.find((c) => websiteKey(c.website) === key)
+          if (match) {
+            const rank = nextCharacters.findIndex((c) => c.id === match.id) + 1
+            setShareBid({ website: pending.website, rank })
+            setFlashId(match.id)
+            setCheckoutMessage('Payment confirmed — you\'re on the board!')
+            clearPendingCheckout()
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+            return
+          }
+        }
+        await sleep(2000)
+      }
+
+      setCheckoutMessage('Payment received. Your bid will appear shortly — refresh if needed.')
+      clearPendingCheckout()
+    })()
+  }, [refreshData])
 
   const totalSpent = useMemo(
     () => bids.reduce((sum, bid) => sum + bid.paid, 0),
@@ -100,13 +144,11 @@ export default function App() {
   const placeBid = useCallback(
     async (input: BidInput): Promise<BidResult | BidError> => {
       const website = normalizeWebsite(input.website)
-      const tagline = input.tagline.trim()
       const amount = input.amount
 
       if (!isValidWebsite(website)) {
         return { ok: false, error: 'Enter a valid website URL.' }
       }
-      if (!tagline) return { ok: false, error: 'Add a one-line pitch.' }
       if (!Number.isFinite(amount) || !Number.isInteger(amount)) {
         return { ok: false, error: 'Enter a whole-dollar amount.' }
       }
@@ -119,6 +161,12 @@ export default function App() {
 
       const key = websiteKey(website)
       const existing = characters.find((c) => websiteKey(c.website) === key) ?? null
+      const tagline = existing ? existing.tagline : input.tagline.trim()
+
+      if (!existing && !tagline) {
+        return { ok: false, error: 'Add a one-line pitch.' }
+      }
+
       if (existing && amount <= existing.amount) {
         return {
           ok: false,
@@ -126,26 +174,30 @@ export default function App() {
         }
       }
 
-      // Free test bids first (no Stripe). Falls back to checkout when free mode is off.
-      const freeResult = await placeFreeBid({
-        website,
-        websiteKey: key,
-        tagline,
-        amount,
-      })
+      if (freeBidsEnabled) {
+        const freeResult = await placeFreeBid({
+          website,
+          websiteKey: key,
+          tagline,
+          amount,
+        })
 
-      if (!freeResult.error) {
-        await refreshData()
-        return {
-          ok: true,
-          free: true,
-          projectedRank: freeResult.projectedRank,
+        if (!freeResult.error) {
+          await refreshData()
+          const nextCharacters = await fetchLeaderboard()
+          const match = nextCharacters.find((c) => websiteKey(c.website) === key)
+          if (match) setFlashId(match.id)
+          return {
+            ok: true,
+            free: true,
+            projectedRank: freeResult.projectedRank,
+          }
         }
-      }
 
-      const freeDisabled = /disabled|stripe/i.test(freeResult.error)
-      if (!freeDisabled) {
-        return { ok: false, error: freeResult.error }
+        const freeDisabled = /disabled|stripe/i.test(freeResult.error)
+        if (!freeDisabled) {
+          return { ok: false, error: freeResult.error }
+        }
       }
 
       const result = await createBidCheckout({ website, tagline, amount })
@@ -155,22 +207,40 @@ export default function App() {
       }
 
       if (result.checkoutUrl) {
+        savePendingCheckout({
+          website,
+          amount,
+          projectedRank: result.projectedRank,
+        })
         window.location.href = result.checkoutUrl
         return { ok: true, checkoutUrl: result.checkoutUrl, projectedRank: result.projectedRank }
       }
 
-      if (result.free) {
-        await refreshData()
-        return { ok: true, free: true, projectedRank: result.projectedRank }
-      }
-
       return {
         ok: false,
-        error: 'Payments are not live yet. Stripe is being connected.',
+        error: 'Could not start payment. Check Stripe configuration.',
       }
     },
-    [characters, refreshData],
+    [characters, freeBidsEnabled, refreshData],
   )
+
+  const handleBidSuccess = useCallback(
+    ({ website, rank, listingId }: { website: string; rank: number; listingId?: string }) => {
+      setShareBid({ website, rank })
+      if (listingId) setFlashId(listingId)
+      else {
+        const key = websiteKey(website)
+        const match = characters.find((c) => websiteKey(c.website) === key)
+        if (match) setFlashId(match.id)
+      }
+    },
+    [characters],
+  )
+
+  const handleRaise = useCallback((website: string) => {
+    setPage('home')
+    setRaiseWebsite(website)
+  }, [])
 
   const goHome = () => {
     setPage('home')
@@ -217,18 +287,15 @@ export default function App() {
       ) : (
         <main id="main-content">
           <Hero
-            key={
-              characters[0]
-                ? `${characters[0].id}-${characters[0].amount}`
-                : 'empty'
-            }
             top={characters[0] ?? null}
             characters={characters}
             online={online}
             visitors={visitors}
+            prefillWebsite={raiseWebsite}
             onSeeStats={goStats}
             onSubmit={placeBid}
-            onBidSuccess={setShareBid}
+            onBidSuccess={handleBidSuccess}
+            onPrefillApplied={() => setRaiseWebsite(null)}
           />
 
           {shareBid ? (
@@ -244,7 +311,11 @@ export default function App() {
           </div>
 
           <div id="board">
-            <Leaderboard characters={characters} flashId={null} />
+            <Leaderboard
+              characters={characters}
+              flashId={flashId}
+              onRaise={handleRaise}
+            />
           </div>
 
           <div id="how">

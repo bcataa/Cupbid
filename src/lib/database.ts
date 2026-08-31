@@ -147,6 +147,25 @@ export interface CheckoutResponse {
   error?: string
 }
 
+export interface SiteConfig {
+  freeBidsEnabled: boolean
+}
+
+export async function fetchSiteConfig(): Promise<SiteConfig> {
+  if (!isSupabaseConfigured) {
+    return { freeBidsEnabled: false }
+  }
+
+  const { data, error } = await supabase
+    .from('site_metrics')
+    .select('free_bids_enabled')
+    .eq('id', 'global')
+    .maybeSingle()
+
+  if (error) throw error
+  return { freeBidsEnabled: Boolean(data?.free_bids_enabled) }
+}
+
 /** Temporary free bids for testing (SQL place_free_bid). No Stripe needed. */
 export async function placeFreeBid(input: {
   website: string

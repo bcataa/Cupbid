@@ -5,16 +5,19 @@ import { SiteLogo } from './SiteLogo'
 interface LeaderboardProps {
   characters: Character[]
   flashId: string | null
+  onRaise?: (website: string) => void
 }
 
 function Row({
   character,
   rank,
   flash,
+  onRaise,
 }: {
   character: Character
   rank: number
   flash: boolean
+  onRaise?: (website: string) => void
 }) {
   const host = displayHost(character.website)
 
@@ -37,12 +40,23 @@ function Row({
         </div>
         <p className="tagline">{character.tagline}</p>
       </div>
-      <span className="amount">{formatMoney(character.amount)}</span>
+      <div className="row-actions">
+        <span className="amount">{formatMoney(character.amount)}</span>
+        {onRaise ? (
+          <button
+            type="button"
+            className="btn raise-btn"
+            onClick={() => onRaise(character.website)}
+          >
+            Raise
+          </button>
+        ) : null}
+      </div>
     </li>
   )
 }
 
-export function Leaderboard({ characters, flashId }: LeaderboardProps) {
+export function Leaderboard({ characters, flashId, onRaise }: LeaderboardProps) {
   return (
     <section className="leaderboard" aria-labelledby="leaderboard-title">
       <div className="section-head">
@@ -60,6 +74,7 @@ export function Leaderboard({ characters, flashId }: LeaderboardProps) {
               character={character}
               rank={index + 1}
               flash={flashId === character.id}
+              onRaise={onRaise}
             />
           ))}
         </ol>

@@ -44,12 +44,15 @@ Deno.serve(async (req) => {
     const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
     const siteUrl = Deno.env.get('SITE_URL') ?? 'https://cupbid.lol'
 
+    if (!stripeSecretKey) {
+      return json({ error: 'Payments are not configured. Add STRIPE_SECRET_KEY.' }, 503)
+    }
+
     const serviceClient = createClient(
       supabaseUrl,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     )
 
-    // Optional auth — bids work without login
     let userId: string | null = null
     const authHeader = req.headers.get('Authorization')
     if (authHeader) {
@@ -62,14 +65,11 @@ Deno.serve(async (req) => {
 
     const body = await req.json()
     const website = normalizeWebsite(String(body.website ?? ''))
-    const tagline = String(body.tagline ?? '').trim()
+    const taglineInput = String(body.tagline ?? '').trim()
     const amount = Number(body.amount)
 
     if (!isValidWebsite(website)) {
       return json({ error: 'Enter a valid website URL.' }, 400)
-    }
-    if (!tagline || tagline.length > 120) {
-      return json({ error: 'Add a one-line pitch (max 120 characters).' }, 400)
     }
     if (!Number.isInteger(amount) || amount < MIN_BID) {
       return json({ error: `Minimum bid is $${MIN_BID}.` }, 400)
@@ -79,9 +79,18 @@ Deno.serve(async (req) => {
 
     const { data: existingListing } = await serviceClient
       .from('listings')
-      .select('id, amount')
+      .select('id, amount, tagline')
       .eq('website_key', key)
       .maybeSingle()
+
+    const isRaise = Boolean(existingListing)
+    const tagline = isRaise ? existingListing!.tagline : taglineInput
+
+    if (!isRaise) {
+      if (!tagline || tagline.length > 120) {
+        return json({ error: 'Add a one-line pitch (max 120 characters).' }, 400)
+      }
+    }
 
     const previousAmount = existingListing?.amount ?? 0
     const paid = amount - previousAmount
@@ -125,38 +134,6 @@ Deno.serve(async (req) => {
       return json({ error: 'Could not start checkout. Try again.' }, 500)
     }
 
-    // No Stripe yet → place bid for free (testing only)
-    if (!stripeSecretKey) {
-      const { data: freeResult, error: freeError } = await serviceClient.rpc(
-        'record_paid_bid',
-        {
-          p_user_id: userId,
-          p_website: website,
-          p_website_key: key,
-          p_tagline: tagline,
-          p_amount: amount,
-          p_paid: paid,
-          p_stripe_payment_id: `free_test_${pending.id}`,
-        },
-      )
-
-      if (freeError) {
-        console.error('free bid failed', freeError)
-        return json({ error: freeError.message || 'Could not place test bid.' }, 500)
-      }
-
-      await serviceClient
-        .from('pending_checkouts')
-        .update({ status: 'completed' })
-        .eq('id', pending.id)
-
-      return json({
-        free: true,
-        projectedRank: freeResult?.position ?? projectedRank,
-        pendingCheckoutId: pending.id,
-      })
-    }
-
     const Stripe = (await import('https://esm.sh/stripe@17.7.0?target=deno')).default
     const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' })
 
@@ -169,8 +146,12 @@ Deno.serve(async (req) => {
             currency: 'usd',
             unit_amount: paid * 100,
             product_data: {
-              name: `CupBid — ${key}`,
-              description: tagline,
+              name: isRaise
+                ? `CupBid raise — ${key}`
+                : `CupBid listing — ${key}`,
+              description: isRaise
+                ? `Raise to $${amount} on the leaderboard`
+                : tagline,
             },
           },
           quantity: 1,
@@ -186,6 +167,7 @@ Deno.serve(async (req) => {
         tagline,
         amount: String(amount),
         paid: String(paid),
+        is_raise: isRaise ? 'true' : 'false',
       },
     })
 

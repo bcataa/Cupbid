@@ -18,7 +18,7 @@ export function HowItWorks() {
         </li>
         <li>
           <strong>2. Pay to rank</strong>
-          <p>Higher bid = higher spot. No max. Raise anytime with the same URL.</p>
+          <p>Higher bid = higher spot. Raise anytime with the same URL — pitch stays locked.</p>
         </li>
         <li>
           <strong>3. Get users</strong>

@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { DEFAULT_BID, MIN_SPONSOR_BID } from '../lib/constants'
 import {
   displayHost,
@@ -16,9 +16,11 @@ interface HeroProps {
   characters: Character[]
   online: number
   visitors: number
+  prefillWebsite?: string | null
   onSeeStats: () => void
   onSubmit: (input: BidInput) => Promise<BidResult | BidError>
-  onBidSuccess?: (result: { website: string; rank: number }) => void
+  onBidSuccess?: (result: { website: string; rank: number; listingId?: string }) => void
+  onPrefillApplied?: () => void
 }
 
 export function Hero({
@@ -26,9 +28,11 @@ export function Hero({
   characters,
   online,
   visitors,
+  prefillWebsite,
   onSeeStats,
   onSubmit,
   onBidSuccess,
+  onPrefillApplied,
 }: HeroProps) {
   const minToLead = top ? top.amount + 1 : MIN_SPONSOR_BID
 
@@ -61,6 +65,7 @@ export function Hero({
   const existingRank = existing
     ? characters.findIndex((c) => c.id === existing.id) + 1
     : null
+  const lockedTagline = isRaise ? existing!.tagline : tagline
 
   const projectedRank = useMemo(() => {
     const others = characters.filter((c) => !existing || c.id !== existing.id)
@@ -81,7 +86,7 @@ export function Hero({
     if (isRaise) {
       return {
         nudge: 'Climb the board — higher rank, more clicks.',
-        perks: ['Pay just the raise', 'Keep your listing live', 'Beat the sites above you'],
+        perks: ['Pay just the raise', 'Pitch stays locked', 'Beat the sites above you'],
       }
     }
     if (!top) {
@@ -101,6 +106,33 @@ export function Hero({
       perks: ['Real visitors browse this board', 'Your logo + pitch on display', 'Pay once, stay visible'],
     }
   }, [beatsTop, isRaise, minToLead, top])
+
+  useEffect(() => {
+    if (!prefillWebsite) return
+    applyWebsite(prefillWebsite)
+    onPrefillApplied?.()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [prefillWebsite])
+
+  const applyWebsite = (value: string) => {
+    setWebsite(value)
+    setError('')
+    setManualAmount(null)
+    setAmountText(null)
+    const site = value.trim() ? normalizeWebsite(value) : ''
+    if (!site || !isValidWebsite(site)) return
+    const key = websiteKey(site)
+    const match = characters.find((c) => websiteKey(c.website) === key)
+    if (match) {
+      setTagline(match.tagline)
+    } else {
+      setTagline('')
+    }
+  }
+
+  const handleWebsiteChange = (value: string) => {
+    applyWebsite(value)
+  }
 
   const setBidAmount = (value: number) => {
     const next = Math.max(MIN_SPONSOR_BID, Math.floor(value) || MIN_SPONSOR_BID)
@@ -127,20 +159,6 @@ export function Hero({
     setAmountText(null)
   }
 
-  const handleWebsiteChange = (value: string) => {
-    setWebsite(value)
-    setError('')
-    setManualAmount(null)
-    setAmountText(null)
-    const site = value.trim() ? normalizeWebsite(value) : ''
-    if (!site || !isValidWebsite(site)) return
-    const key = websiteKey(site)
-    const match = characters.find((c) => websiteKey(c.website) === key)
-    if (match) {
-      setTagline(match.tagline)
-    }
-  }
-
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
 
@@ -149,11 +167,14 @@ export function Hero({
 
     const site = normalizeWebsite(website)
     const finalAmount = Math.max(minAllowed, Math.max(MIN_SPONSOR_BID, amount || defaultAmount))
+    const finalTagline = isRaise
+      ? existing!.tagline
+      : tagline.trim() || `Sponsored ${displayHost(site)}`
 
     try {
       const result = await onSubmit({
         website: site,
-        tagline: tagline || `Sponsored ${displayHost(site)}`,
+        tagline: finalTagline,
         amount: finalAmount,
       })
 
@@ -167,6 +188,7 @@ export function Hero({
       onBidSuccess?.({
         website: site,
         rank: result.projectedRank ?? projectedRank,
+        listingId: existing?.id,
       })
 
       setWebsite('')
@@ -205,7 +227,7 @@ export function Hero({
           type="button"
           aria-label="Decrease bid"
           onClick={() => bump(-1)}
-          disabled={amount <= MIN_SPONSOR_BID}
+          disabled={amount <= minAllowed}
         >
           −
         </button>
@@ -243,23 +265,35 @@ export function Hero({
             aria-label="Website URL"
           />
         </div>
-        <input
-          className="pitch"
-          type="text"
-          placeholder="One-line pitch"
-          maxLength={60}
-          value={tagline}
-          onChange={(event) => setTagline(event.target.value)}
-          aria-label="Pitch"
-        />
+        {isRaise ? (
+          <div className="pitch pitch-locked" aria-label="Pitch (locked)">
+            <span className="pitch-locked-label">Pitch locked</span>
+            <span className="pitch-locked-text">{lockedTagline}</span>
+          </div>
+        ) : (
+          <input
+            className="pitch"
+            type="text"
+            placeholder="One-line pitch"
+            maxLength={120}
+            value={tagline}
+            onChange={(event) => setTagline(event.target.value)}
+            aria-label="Pitch"
+            required
+          />
+        )}
         <button type="submit" className="btn primary" disabled={busy}>
           {busy
-            ? 'Saving…'
+            ? 'Processing…'
             : isRaise
               ? `Pay ${formatMoney(payNow)} now`
               : `Pay ${formatMoney(payNow)}`}
         </button>
       </form>
+
+      {isRaise ? (
+        <p className="pitch-note">Pitch can only be changed by admin. Raises update your rank only.</p>
+      ) : null}
 
       {validSite ? (
         <div className="site-preview" aria-live="polite">
