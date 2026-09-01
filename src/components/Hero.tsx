@@ -76,37 +76,6 @@ export function Hero({
     top && amount >= minToLead && (!existing || existing.id !== top.id),
   )
 
-  const motivation = useMemo(() => {
-    if (isRaise && beatsTop) {
-      return {
-        nudge: 'One raise away from the top spot.',
-        perks: ['Only pay the difference', 'Jump to #1 instantly', 'Everyone sees you first'],
-      }
-    }
-    if (isRaise) {
-      return {
-        nudge: 'Climb the board — higher rank, more clicks.',
-        perks: ['Pay just the raise', 'Pitch stays locked', 'Beat the sites above you'],
-      }
-    }
-    if (!top) {
-      return {
-        nudge: 'The cup is empty. Be the first name people see.',
-        perks: ['Instant #1 placement', 'Live on the public board', 'Start from just $1'],
-      }
-    }
-    if (beatsTop) {
-      return {
-        nudge: `Take #1 for ${formatMoney(minToLead)} — own the spotlight.`,
-        perks: ['Top slot gets the most clicks', 'Stay until someone outbids', 'Cheaper than running ads'],
-      }
-    }
-    return {
-      nudge: `${displayHost(top.website)} holds #1 at ${formatMoney(top.amount)}. Outbid them.`,
-      perks: ['Real visitors browse this board', 'Your logo + pitch on display', 'Pay once, stay visible'],
-    }
-  }, [beatsTop, isRaise, minToLead, top])
-
   useEffect(() => {
     if (!prefillWebsite) return
     applyWebsite(prefillWebsite)
@@ -212,15 +181,6 @@ export function Hero({
         Skip overpriced ads. Put your site on the board and get real clicks from
         people browsing right now.
       </p>
-
-      <div className="hero-motivation">
-        <p className="hero-nudge">{motivation.nudge}</p>
-        <ul className="hero-perks">
-          {motivation.perks.map((perk) => (
-            <li key={perk}>{perk}</li>
-          ))}
-        </ul>
-      </div>
 
       <div className="amount-stepper amount-editor" aria-label="Bid amount">
         <button

@@ -350,39 +350,6 @@ a {
   line-height: 1.45;
 }
 
-.hero-motivation {
-  margin: 18px auto 0;
-  max-width: 36rem;
-}
-
-.hero-nudge {
-  font-size: 1.08rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--accent);
-  line-height: 1.35;
-}
-
-.hero-perks {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 12px;
-  list-style: none;
-}
-
-.hero-perks li {
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(232, 93, 76, 0.22);
-  background: rgba(255, 255, 255, 0.42);
-  color: #4a4540;
-  font-size: 0.86rem;
-  font-weight: 600;
-  backdrop-filter: blur(10px);
-}
-
 .amount-stepper {
   display: inline-flex;
   align-items: center;
@@ -1131,10 +1098,6 @@ a {
 @media (max-width: 640px) {
   .app {
     width: min(100% - 20px, 920px);
-  }
-
-  .hero-perks li {
-    font-size: 0.78rem;
   }
 
   .stats {
