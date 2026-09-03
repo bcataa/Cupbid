@@ -1,0 +1,17 @@
+# Supabase local config (used for `supabase functions deploy`)
+project_id = "abkkbivgnxxqkhzkgvsd"
+
+[api]
+enabled = true
+
+[db]
+major_version = 15
+
+[functions.create-bid-checkout]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.confirm-checkout]
+verify_jwt = false

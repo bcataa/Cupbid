@@ -229,3 +229,33 @@ export async function createBidCheckout(input: {
 
   return payload
 }
+
+export async function confirmCheckout(sessionId: string): Promise<{
+  ok?: boolean
+  website?: string
+  amount?: number
+  error?: string
+}> {
+  if (!isSupabaseConfigured) {
+    return { error: 'Database is not configured.' }
+  }
+
+  const { data, error } = await supabase.functions.invoke('confirm-checkout', {
+    body: { sessionId },
+  })
+
+  if (error) {
+    const context = (error as { context?: Response }).context
+    if (context) {
+      try {
+        const body = (await context.json()) as { error?: string }
+        if (body?.error) return { error: body.error }
+      } catch {
+        // ignore
+      }
+    }
+    return { error: error.message || 'Could not confirm payment.' }
+  }
+
+  return data as { ok?: boolean; website?: string; amount?: number; error?: string }
+}

@@ -16,6 +16,7 @@ import {
 } from './lib/checkout'
 import {
   createBidCheckout,
+  confirmCheckout,
   fetchBids,
   fetchLeaderboard,
   fetchSiteConfig,
@@ -107,18 +108,27 @@ export default function App() {
 
     if (checkout !== 'success') return
 
+    const sessionId = params.get('session_id')
     window.history.replaceState({}, '', window.location.pathname)
     const pending = readPendingCheckout()
 
     void (async () => {
       setCheckoutMessage('Payment received — confirming your spot on the board…')
 
+      if (sessionId) {
+        const confirmed = await confirmCheckout(sessionId)
+        if (confirmed.error) {
+          setCheckoutMessage(`Payment received, but board update failed: ${confirmed.error}`)
+        }
+      }
+
       for (let attempt = 0; attempt < 20; attempt += 1) {
         const nextCharacters = await refreshData()
         if (pending && nextCharacters) {
           const key = websiteKey(pending.website)
           const match = nextCharacters.find((c) => websiteKey(c.website) === key)
-          if (match) {
+          // For raises, require the board amount to reflect the paid total
+          if (match && match.amount >= pending.amount) {
             const rank = nextCharacters.findIndex((c) => c.id === match.id) + 1
             setShareBid({ website: pending.website, rank })
             setFlashId(match.id)
@@ -131,7 +141,7 @@ export default function App() {
         await sleep(2000)
       }
 
-      setCheckoutMessage('Payment received. Your bid will appear shortly — refresh if needed.')
+      setCheckoutMessage('Payment received. Refresh the page if your bid is not visible yet.')
       clearPendingCheckout()
     })()
   }, [refreshData])

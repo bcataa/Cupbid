@@ -1,15 +1,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import Stripe from 'https://esm.sh/stripe@14.25.0?target=deno&no-check'
 
 Deno.serve(async (req) => {
-  const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
-  const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET')
+  const stripeSecretKey = (Deno.env.get('STRIPE_SECRET_KEY') ?? '').trim()
+  const webhookSecret = (Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? '').trim()
 
   if (!stripeSecretKey || !webhookSecret) {
     return new Response('Stripe not configured', { status: 503 })
   }
 
-  const Stripe = (await import('https://esm.sh/stripe@17.7.0?target=deno')).default
-  const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' })
+  const stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2024-06-20',
+    httpClient: Stripe.createFetchHttpClient(),
+  })
 
   const signature = req.headers.get('stripe-signature')
   if (!signature) {
@@ -18,7 +21,7 @@ Deno.serve(async (req) => {
 
   const body = await req.text()
 
-  let event
+  let event: Stripe.Event
   try {
     event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
   } catch (err) {
@@ -30,19 +33,16 @@ Deno.serve(async (req) => {
     return new Response('Ignored', { status: 200 })
   }
 
-  const session = event.data.object as {
-    id: string
-    payment_intent: string | null
-    metadata: Record<string, string>
-  }
+  const session = event.data.object as Stripe.Checkout.Session
+  const metadata = session.metadata ?? {}
 
-  const pendingId = session.metadata.pending_checkout_id
-  const userId = session.metadata.user_id || null
-  const website = session.metadata.website
-  const websiteKey = session.metadata.website_key
-  const tagline = session.metadata.tagline
-  const amount = Number(session.metadata.amount)
-  const paid = Number(session.metadata.paid)
+  const pendingId = metadata.pending_checkout_id
+  const userId = metadata.user_id || null
+  const website = metadata.website
+  const websiteKey = metadata.website_key
+  const tagline = metadata.tagline ?? ''
+  const amount = Number(metadata.amount)
+  const paid = Number(metadata.paid)
 
   if (!pendingId || !website || !websiteKey) {
     console.error('Missing metadata on checkout session', session.id)
@@ -76,7 +76,10 @@ Deno.serve(async (req) => {
     p_tagline: tagline,
     p_amount: amount,
     p_paid: paid,
-    p_stripe_payment_id: session.payment_intent ?? session.id,
+    p_stripe_payment_id:
+      typeof session.payment_intent === 'string'
+        ? session.payment_intent
+        : session.id,
   })
 
   if (recordError) {
