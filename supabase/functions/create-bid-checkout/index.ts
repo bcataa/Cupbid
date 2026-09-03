@@ -149,6 +149,8 @@ Deno.serve(async (req) => {
     try {
       session = await stripe.checkout.sessions.create({
         mode: 'payment',
+        // CupBid is a simple one-time bid payment — not Managed Payments.
+        managed_payments: { enabled: false },
         line_items: [
           {
             price_data: {
@@ -161,6 +163,7 @@ Deno.serve(async (req) => {
                 description: isRaise
                   ? `Raise to $${amount} on the leaderboard`
                   : tagline,
+                tax_code: 'txcd_10000000',
               },
             },
             quantity: 1,
