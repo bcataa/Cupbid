@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1'
+import Stripe from 'https://esm.sh/stripe@14.25.0?target=deno&no-check'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,11 +42,16 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY')
-    const siteUrl = Deno.env.get('SITE_URL') ?? 'https://cupbid.lol'
+    const stripeSecretKey = (Deno.env.get('STRIPE_SECRET_KEY') ?? '').trim()
+    const siteUrl = (Deno.env.get('SITE_URL') ?? 'https://cupbid.lol').trim()
 
     if (!stripeSecretKey) {
       return json({ error: 'Payments are not configured. Add STRIPE_SECRET_KEY.' }, 503)
+    }
+    if (!stripeSecretKey.startsWith('sk_')) {
+      return json({
+        error: 'STRIPE_SECRET_KEY looks wrong. It must start with sk_test_ or sk_live_.',
+      }, 503)
     }
 
     const serviceClient = createClient(
@@ -134,47 +140,64 @@ Deno.serve(async (req) => {
       return json({ error: 'Could not start checkout. Try again.' }, 500)
     }
 
-    const Stripe = (await import('https://esm.sh/stripe@17.7.0?target=deno')).default
-    const stripe = new Stripe(stripeSecretKey, { apiVersion: '2024-12-18.acacia' })
-
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            unit_amount: paid * 100,
-            product_data: {
-              name: isRaise
-                ? `CupBid raise — ${key}`
-                : `CupBid listing — ${key}`,
-              description: isRaise
-                ? `Raise to $${amount} on the leaderboard`
-                : tagline,
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${siteUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${siteUrl}/?checkout=cancelled`,
-      metadata: {
-        pending_checkout_id: pending.id,
-        user_id: userId ?? '',
-        website,
-        website_key: key,
-        tagline,
-        amount: String(amount),
-        paid: String(paid),
-        is_raise: isRaise ? 'true' : 'false',
-      },
+    const stripe = new Stripe(stripeSecretKey, {
+      apiVersion: '2024-06-20',
+      httpClient: Stripe.createFetchHttpClient(),
     })
+
+    let session: Stripe.Checkout.Session
+    try {
+      session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        line_items: [
+          {
+            price_data: {
+              currency: 'usd',
+              unit_amount: paid * 100,
+              product_data: {
+                name: isRaise
+                  ? `CupBid raise — ${key}`
+                  : `CupBid listing — ${key}`,
+                description: isRaise
+                  ? `Raise to $${amount} on the leaderboard`
+                  : tagline,
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        success_url: `${siteUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${siteUrl}/?checkout=cancelled`,
+        metadata: {
+          pending_checkout_id: pending.id,
+          user_id: userId ?? '',
+          website,
+          website_key: key,
+          tagline,
+          amount: String(amount),
+          paid: String(paid),
+          is_raise: isRaise ? 'true' : 'false',
+        },
+      })
+    } catch (stripeErr) {
+      const message =
+        stripeErr instanceof Error ? stripeErr.message : 'Stripe checkout failed.'
+      console.error('stripe checkout failed', stripeErr)
+      await serviceClient
+        .from('pending_checkouts')
+        .update({ status: 'failed' })
+        .eq('id', pending.id)
+      return json({ error: message }, 502)
+    }
 
     await serviceClient
       .from('pending_checkouts')
       .update({ stripe_session_id: session.id })
       .eq('id', pending.id)
+
+    if (!session.url) {
+      return json({ error: 'Stripe did not return a checkout URL.' }, 502)
+    }
 
     return json({
       checkoutUrl: session.url,
@@ -183,7 +206,8 @@ Deno.serve(async (req) => {
     })
   } catch (err) {
     console.error(err)
-    return json({ error: 'Server error. Try again.' }, 500)
+    const message = err instanceof Error ? err.message : 'Server error. Try again.'
+    return json({ error: message }, 500)
   }
 })
 

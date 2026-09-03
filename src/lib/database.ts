@@ -209,11 +209,21 @@ export async function createBidCheckout(input: {
   })
 
   if (error) {
+    // Prefer the JSON body from a non-2xx edge function response
+    const context = (error as { context?: Response }).context
+    if (context) {
+      try {
+        const body = (await context.json()) as CheckoutResponse
+        if (body?.error) return { error: body.error }
+      } catch {
+        // ignore parse errors
+      }
+    }
     return { error: error.message || 'Could not start checkout.' }
   }
 
   const payload = data as CheckoutResponse
-  if (payload.error) {
+  if (payload?.error) {
     return { error: payload.error }
   }
 
